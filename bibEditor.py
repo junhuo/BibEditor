@@ -6,6 +6,7 @@ import tkMessageBox
 import ScrolledText
 import tkFont
 import ctypes
+import argparse
 
 import os
 import Pmw
@@ -548,6 +549,10 @@ class FieldMenu:
         
 class Main:
     def __init__(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('inputFile', nargs='?', help="Input .bib or .db filename/path")
+        self.args = parser.parse_args()
+        
         self.entriesDefault = Constants()._entriesDefault()
         self.fieldText = Constants()._fieldText()
         self.allFields = Constants()._allFields()
@@ -589,6 +594,8 @@ class Main:
         self.findBar.pack(fill='x', expand=0, padx=10, pady=5)
 
         self.tbox1.pack(side=LEFT, padx=2, pady=2, fill='both', expand=1)
+
+        self.checkCommandLine()
     
         self.root.mainloop()
 
@@ -720,6 +727,31 @@ class Main:
                 self.checkExported()
             else:
                 RaiseError('File Error', path+'\nInvalid file extension')
+                self.importFile()
+            self.updateLineNums()
+            self.addToHistory()
+
+    #checks Command Line for an input file
+    def checkCommandLine(self):
+        if (self.args.inputFile):
+            if (not os.path.isfile(self.args.inputFile)):
+                RaiseError('File Error', self.args.inputFile+'\ncannot be found')
+                self.importFile()
+            elif (self.args.inputFile[-4:]==u'.bib'):
+                self.original = loadTextString(self.args.inputFile)
+                self.tbox1.settext(self.original)
+                self.root.title('BibTeX Editor - '+self.args.inputFile)
+                self.exported = False
+                self.checkExported()
+            elif (self.args.inputFile[-3:]==u'.db'):
+                a = PromptDB(self.root, self.tbox1, self.args.inputFile)
+                a.openFile()
+                a.tbl.activate()
+                self.root.title('BibTeX Editor - '+self.args.inputFile)
+                self.exported = False
+                self.checkExported()
+            else:
+                RaiseError('File Error', self.args.inputFile+'\nInvalid file extension')
                 self.importFile()
             self.updateLineNums()
             self.addToHistory()
