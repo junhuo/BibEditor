@@ -1,3 +1,5 @@
+import os
+
 class Default(object):
     def __init__(self):
         self.fieldText = "@ARTICLE\n"+\
@@ -319,14 +321,22 @@ Help Menu:
 
 class Constants(object):
     def __init__(self):
-        self.fieldText = Default()._fieldText()
-        self.allEntryTypes = Default()._allEntryTypes()
-        self.entriesDefault = Default()._entriesDefault()
-        self.allFields = Default()._allFields()
-        self.helpMessage = Default()._helpMessage()
+        self.Default = Default()
+        self.fieldText = self.Default._fieldText()
+        self.allEntryTypes = self.Default._allEntryTypes()
+        self.entriesDefault = self.Default._entriesDefault()
+        self.allFields = self.Default._allFields()
+        self.helpMessage = self.Default._helpMessage()
+
+        currdir = os.path.dirname(os.path.realpath(__file__))
+        if (currdir[-4:]==u'.zip'):
+            path = currdir.split('\\')
+            path.pop()
+            currdir = '\\'.join(path)
+        self.currdir = currdir
 
         try:
-            fileHandler = open('fieldOrderDefault.txt', "rt")
+            fileHandler = open(self.currdir+'\\fieldOrderDefault.txt', "rt")
             text = fileHandler.read()
             fileHandler.close()
             self.fieldText = text

@@ -7,6 +7,7 @@ import ScrolledText
 import tkFont
 import ctypes
 import argparse
+import unicodedata
 
 import os
 import Pmw
@@ -36,8 +37,9 @@ class RaiseMessage:
 ##------------------------------------------------------------------------------
 
 class PromptDB:
-    def __init__(self, parent, tbox1, path):
+    def __init__(self, parent, tbox1, path, Constants):
         self.parent = parent
+        self.Constants = Constants
         self.tbox1 = tbox1
         self.path = path
 
@@ -106,7 +108,7 @@ class PromptDB:
                 for k in keys:
                     entry = bibs[k]
                     self.text = self.text+formatBib(k, entry,
-                                                    Constants()._fieldText())
+                                                    self.Constants._fieldText())
                 self.tbox1.settext(self.text)
                 self.tbl.deactivate()
 
@@ -143,8 +145,9 @@ class PromptDB:
 ##------------------------------------------------------------------------------
         
 class InsertEntry(object):
-    def __init__(self, parent, tbox1, entriesDefault, allFields):
+    def __init__(self, parent, tbox1, entriesDefault, allFields, Constants):
         self.parent = parent
+        self.Constants = Constants
         self.tbox1 = tbox1
         
         ##Get default fields from Main(),
@@ -154,7 +157,7 @@ class InsertEntry(object):
         
         self.entry = ''
 
-        self.allTypes = Constants()._allEntryTypes()
+        self.allTypes = self.Constants._allEntryTypes()
 
         self.upload_opt = {'filetypes':[('Plain text files','.txt'),],
                            'parent': self.parent,
@@ -235,7 +238,7 @@ class InsertEntry(object):
             ##Set fields into entry dictionary
             for e in self.entries:
                 entry[e.getLabel()] = e.getEntry()
-            newEntry = formatBib(key, entry, Constants()._fieldText())
+            newEntry = formatBib(key, entry, self.Constants._fieldText())
             self.tbox1.appendtext(newEntry)
             ##Pop-up message of entry added
             RaiseMessage('Entry Added: '+key, 'Entry:\n'+newEntry+
@@ -461,10 +464,11 @@ class KeyMenu(Frame):
 ##------------------------------------------------------------------------------
         
 class FieldMenu:
-    def __init__(self, parent, fieldText):
+    def __init__(self, parent, fieldText, Constants):
         self.parent = parent
+        self.Constants = Constants
         self.fieldText = fieldText
-        self.entriesDefault = Constants()._entriesDefault()
+        self.entriesDefault = self.Constants._entriesDefault()
         
         self.dialog = Pmw.Dialog(self.parent,
                                  title='Change Default Field Order',
@@ -528,8 +532,8 @@ class FieldMenu:
 
     def buttonCommands(self, button):
         if (button == 'Use default\norder'):
-            self.entriesDefault = Constants()._entriesDefault()
-            self.fieldText = Constants()._fieldText()
+            self.entriesDefault = self.Constants._entriesDefault()
+            self.fieldText = self.Constants._fieldText()
             self.dialog.deactivate()
         elif (button == 'Import field order\nfrom file'):
             self.importFields()
@@ -550,14 +554,19 @@ class FieldMenu:
 class Main:
     def __init__(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('inputFile', nargs='?', help="Input .bib or .db filename/path")
+        parser.add_argument('inputFile', nargs='?',
+                            help="Input .bib or .db filename/path")
         self.args = parser.parse_args()
+
+        self.Constants = Constants()
         
-        self.entriesDefault = Constants()._entriesDefault()
-        self.fieldText = Constants()._fieldText()
-        self.allFields = Constants()._allFields()
+        self.entriesDefault = self.Constants._entriesDefault()
+        self.fieldText = self.Constants._fieldText()
+        self.allFields = self.Constants._allFields()
+        self.currdir = self.Constants.currdir
 
         self.exported = True
+        self.filepath = ''
         
         self.root = Pmw.initialise()
         self.root.protocol('WM_DELETE_WINDOW', self.checkSaved)
@@ -615,6 +624,8 @@ class Main:
         if (ctrl):
             if ((keysym=='o' or keysym=='O') and shift==False):
                 self.importFile()
+            elif ((keysym=='s' or keysym=='S') and shift==False):
+                self.saveFile()
             elif ((keysym=='i' or keysym=='I') and shift==False):
                 self.insertEntry()
             elif ((keysym=='z' or keysym=='Z') and shift==False):
@@ -639,10 +650,11 @@ class Main:
         menu = Menu(self.menubar, tearoff=0) ##Reset menu button commands
         self.menubar.add_cascade(label="File", menu=menu)
         menu.add_command(label="Import  (Ctrl+O)", command=self.importFile)
+        menu.add_command(label="Save .bib (Ctr+S)", command=self.saveFile)
         menu.add_separator()
-        menu.add_command(label="Export as .bib", command=self.exportBibFile)
-        menu.add_command(label="Export as HTML", command=self.exportHTMLFile)
-        menu.add_command(label="Export as .db", command=self.exportDBFile)
+        menu.add_command(label="Save AS .bib", command=self.exportBibFile)
+        menu.add_command(label="Save AS HTML", command=self.exportHTMLFile)
+        menu.add_command(label="Save AS .db", command=self.exportDBFile)
         menu.add_separator()
         menu.add_command(label="Exit", command=self.root.destroy)
 
@@ -701,66 +713,74 @@ class Main:
     ##Returns path of the file opened
     def openFileName(self, imp_opt):
         fileName = tkFileDialog.askopenfilename(**imp_opt)
-        if (fileName): return fileName
+        if (fileName):
+            return fileName
 
     ##Returns path of file name to be saved
     def saveFileName(self, exp_opt):
         fileName = tkFileDialog.asksaveasfilename(**exp_opt)
-        if (fileName): return fileName
+        if (fileName):
+            return fileName
+
+    ##Overwrite the .bib file with new version (save as is)
+    def saveFile(self):
+        if (self.filepath!=''):
+            new = self.tbox1.get(first=None, last=None)
+            self.new = \
+                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+            open(self.filepath, 'w+').write(self.new)
+            self.root.title('BibTeX Editor - '+self.filepath)
+            self.exported = True
+        else:
+            self.exportBibFile()
 
     ##Load the file into textbox
     def importFile(self):
         path = self.openFileName(self.imp_opt)
         if (path):
-            if (path[-4:]==u'.bib'):
-                self.original = loadTextString(path)
-                self.tbox1.settext(self.original)
-                self.root.title('BibTeX Editor - '+path)
-                self.exported = False
-                self.checkExported()
-            elif (path[-3:]==u'.db'):
-                a = PromptDB(self.root, self.tbox1, path)
-                a.openFile()
-                a.tbl.activate()
-                self.root.title('BibTeX Editor - '+path)
-                self.exported = False
-                self.checkExported()
-            else:
-                RaiseError('File Error', path+'\nInvalid file extension')
-                self.importFile()
-            self.updateLineNums()
-            self.addToHistory()
+            self.loadText(path)
 
     #checks Command Line for an input file
     def checkCommandLine(self):
         if (self.args.inputFile):
+            self.path = self.args.inputFile
             if (not os.path.isfile(self.args.inputFile)):
                 RaiseError('File Error', self.args.inputFile+'\ncannot be found')
+                self.path = ''
                 self.importFile()
-            elif (self.args.inputFile[-4:]==u'.bib'):
-                self.original = loadTextString(self.args.inputFile)
-                self.tbox1.settext(self.original)
-                self.root.title('BibTeX Editor - '+self.args.inputFile)
-                self.exported = False
-                self.checkExported()
-            elif (self.args.inputFile[-3:]==u'.db'):
-                a = PromptDB(self.root, self.tbox1, self.args.inputFile)
-                a.openFile()
-                a.tbl.activate()
-                self.root.title('BibTeX Editor - '+self.args.inputFile)
-                self.exported = False
-                self.checkExported()
             else:
-                RaiseError('File Error', self.args.inputFile+'\nInvalid file extension')
-                self.importFile()
-            self.updateLineNums()
-            self.addToHistory()
+                self.loadText(self.args.inputFile)
+
+    #Loads text into textbox
+    def loadText(self, path):
+        self.filepath = path
+        if (path[-4:]==u'.bib'):
+            self.original = loadTextString(path)
+            self.tbox1.settext(self.original)
+            self.root.title('BibTeX Editor - '+path)
+            self.exported = False
+            self.checkExported()
+        elif (path[-3:]==u'.db'):
+            a = PromptDB(self.root, self.tbox1, path, self.Constants)
+            a.openFile()
+            a.tbl.activate()
+            self.root.title('BibTeX Editor - '+path)
+            self.exported = False
+            self.checkExported()
+        else:
+            RaiseError('File Error', path+'\nInvalid file extension')
+            self.importFile()
+        self.updateLineNums()
+        self.addToHistory()
 
     ##Export all contents of text box to .bib file
     def exportBibFile(self):
         path = self.saveFileName(self.exp_bib_opt)
         if (path):
-            self.new = self.tbox1.get(first=None, last=None)
+            self.filepath = path
+            new = self.tbox1.get(first=None, last=None)
+            self.new = \
+                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
             open(path, 'w+').write(self.new)
             self.root.title('BibTeX Editor - '+path)
             self.exported = True
@@ -769,6 +789,7 @@ class Main:
     def exportHTMLFile(self):
         path = self.saveFileName(self.exp_htm_opt)
         if (path):
+            self.filepath = path
             bibText = self.tbox1.get(first=None, last=None)
             self.new = outHTML(bibText)
             open(path, 'w+').write(self.new)
@@ -776,7 +797,8 @@ class Main:
     def exportDBFile(self):
         path = self.saveFileName(self.exp_db_opt)
         if (path):
-            a = PromptDB(self.root, self.tbox1, path)
+            self.filepath = path
+            a = PromptDB(self.root, self.tbox1, path, self.Constants)
             a.saveFile()
             a.tbl.activate()
             self.root.title('BibTeX Editor - '+path)
@@ -785,7 +807,7 @@ class Main:
     ##Insert new entry into the current displayed BibTeX 
     def insertEntry(self):
         a = InsertEntry(self.root, self.tbox1, self.entriesDefault,
-                        self.allFields)
+                        self.allFields, self.Constants)
         a.dialog.activate()
         self.updateLineNums()
         self.addToHistory()
@@ -832,15 +854,14 @@ class Main:
 
     #creates pop-up with Information about bib editor
     def helpMenu(self):
-        tkMessageBox.showinfo('Help', Constants()._helpMessage)
+        tkMessageBox.showinfo('Help', self.Constants._helpMessage())
 
     #updates root title if file has been changed
     def checkExported(self):
         if(not(self.exported) and self.root.title()[:1] != '*'):
             self.root.title("*"+self.root.title())
         elif(self.exported and self.root.title()[:1] == '*'):
-            self.root.title(self.root.title()[1:])
-            
+            self.root.title(self.root.title()[1:])            
 
     #checks if file has been exported since last change
     def checkSaved(self):
@@ -848,11 +869,11 @@ class Main:
             reply = tkMessageBox.askquestion('Error',
                                         'Do you want to exit without saving?')
             if (reply == 'yes'):
-                open('fieldOrderDefault.txt', 'w+').write(
+                open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
                     fields2Txt(self.entriesDefault))
                 self.root.destroy()
         else:
-            open('fieldOrderDefault.txt', 'w+').write(
+            open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
                 fields2Txt(self.entriesDefault))
             self.root.destroy()
 
@@ -941,7 +962,7 @@ class Main:
 
     #requests file to change field orders
     def changeFieldOrder(self):
-        f = FieldMenu(self.root, self.fieldText)
+        f = FieldMenu(self.root, self.fieldText, self.Constants)
         f.dialog.activate()
         (self.fieldText, self.entriesDefault) = f.returnValue()
         for k in self.entriesDefault:
