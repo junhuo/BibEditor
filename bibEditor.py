@@ -540,7 +540,9 @@ class FieldMenu:
         elif (button == 'Export current\nfield order to file'):
             path = self.saveFileName()
             if (path):
-                open(path, 'w+').write(self.fieldOrders.getvalue())
+                f = open(path, 'w+')
+                f.write(self.fieldOrders.getvalue())
+                f.close()
         elif (button == 'Set current\nfield order as default'):
             self.uploadFields()
         elif (button == 'Close' or button == None):
@@ -725,10 +727,11 @@ class Main:
     ##Overwrite the .bib file with new version (save as is)
     def saveFile(self):
         if (self.filepath!=''):
-            new = self.tbox1.get(first=None, last=None)
-            self.new = \
-                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
-            open(self.filepath, 'w+').write(self.new)
+            self.new = self.tbox1.get(first=None, last=None)
+            ##new = unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+            f = open(self.filepath,'w+')
+            f.write(self.new.encode('utf8'))
+            f.close()
             self.root.title('BibTeX Editor - '+self.filepath)
             self.exported = True
         else:
@@ -778,10 +781,10 @@ class Main:
         path = self.saveFileName(self.exp_bib_opt)
         if (path):
             self.filepath = path
-            new = self.tbox1.get(first=None, last=None)
-            self.new = \
-                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
-            open(path, 'w+').write(self.new)
+            self.new = self.tbox1.get(first=None, last=None)
+            f = open(path, 'w+')
+            f.write(self.new.encode('utf8'))
+            f.close()
             self.root.title('BibTeX Editor - '+path)
             self.exported = True
 
@@ -792,7 +795,9 @@ class Main:
             self.filepath = path
             bibText = self.tbox1.get(first=None, last=None)
             self.new = outHTML(bibText)
-            open(path, 'w+').write(self.new)
+            f = open(path, 'w+')
+            f.write(self.new)
+            f.close()
 
     def exportDBFile(self):
         path = self.saveFileName(self.exp_db_opt)
@@ -869,12 +874,14 @@ class Main:
             reply = tkMessageBox.askquestion('Error',
                                         'Do you want to exit without saving?')
             if (reply == 'yes'):
-                open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
-                    fields2Txt(self.entriesDefault))
+                f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
+                f.write(fields2Txt(self.entriesDefault))
+                f.close()
                 self.root.destroy()
         else:
-            open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
-                fields2Txt(self.entriesDefault))
+            f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
+            f.write(fields2Txt(self.entriesDefault))
+            f.close()
             self.root.destroy()
 
     #highlights all instances of the pattern

@@ -785,4 +785,3 @@ def fields2Txt(fieldOrder):
 
     return text
 
-
