@@ -540,9 +540,7 @@ class FieldMenu:
         elif (button == 'Export current\nfield order to file'):
             path = self.saveFileName()
             if (path):
-                f = open(path, 'w+')
-                f.write(self.fieldOrders.getvalue())
-                f.close()
+                open(path, 'w+').write(self.fieldOrders.getvalue())
         elif (button == 'Set current\nfield order as default'):
             self.uploadFields()
         elif (button == 'Close' or button == None):
@@ -670,7 +668,7 @@ class Main:
                          command=self.insertEntry)
         menu.add_command(label="Pull Keys  (Ctrl+P)", command=self.pullKeys)
         menu.add_separator()
-        menu.add_command(label='Unicode Check', command=self.checkUnicode)
+        menu.add_command(label="Unicode check", command=self.checkUnicode)
         menu.add_command(label="Format", command=self.editFormat)
         menu.add_command(label="Sort", command=self.sortEntries)
 
@@ -727,14 +725,21 @@ class Main:
 
     ##Overwrite the .bib file with new version (save as is)
     def saveFile(self):
-        if (self.filepath!=''):
-            self.new = self.tbox1.get(first=None, last=None)
-            ##new = unicodedata.normalize('NFKD',new).encode('ascii','ignore')
-            f = open(self.filepath,'w+')
-            f.write(self.new.encode('utf8'))
-            f.close()
-            self.root.title('BibTeX Editor - '+self.filepath)
-            self.exported = True
+        if (self.filepath!='.bib'):
+            new = self.tbox1.get(first=None, last=None)
+            self.new = \
+                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+            try:
+                open("temp.bib", 'w+').write(self.new)
+                os.remove(self.filepath)
+                os.rename("temp.bib", self.filepath)
+                self.root.title('BibTeX Editor - '+self.filepath)
+                self.loadText(self.filepath)
+                self.exported = True
+                self.checkExported()
+            except:
+                RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                os.remove("temp.bib")
         else:
             self.exportBibFile()
 
@@ -777,17 +782,49 @@ class Main:
         self.updateLineNums()
         self.addToHistory()
 
+    ##Check for non-ascii characters in file and raise message
+    def checkUnicode(self):
+        text = self.tbox1.get(first=None,last=None)
+        message = checkUnicode(text)
+
+        RaiseMessage('Unicode check',message)
+
     ##Export all contents of text box to .bib file
     def exportBibFile(self):
         path = self.saveFileName(self.exp_bib_opt)
         if (path):
-            self.filepath = path
-            self.new = self.tbox1.get(first=None, last=None)
-            f = open(path, 'w+')
-            f.write(self.new.encode('utf8'))
-            f.close()
-            self.root.title('BibTeX Editor - '+path)
-            self.exported = True
+            if (os.path.exists(path)):
+                self.filepath = path
+                new = self.tbox1.get(first=None, last=None)
+                self.new = \
+                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                try:
+                    open("temp.bib", 'w+').write(self.new)
+                    os.remove(self.filepath)
+                    os.rename("temp.bib", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.loadText(self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                    os.remove("temp.bib")
+            else:
+                self.filepath = path
+                new = self.tbox1.get(first=None, last=None)
+                self.new = \
+                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                try:
+                    open("temp.bib", 'w+').write(self.new)
+                    os.rename("temp.bib", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.loadText(self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot write file.')
+                    os.remove("temp.bib")
+                
 
     #Export to .htm file
     def exportHTMLFile(self):
@@ -795,10 +832,33 @@ class Main:
         if (path):
             self.filepath = path
             bibText = self.tbox1.get(first=None, last=None)
-            self.new = outHTML(bibText)
-            f = open(path, 'w+')
-            f.write(self.new)
-            f.close()
+            try:
+                self.new = outHTML(bibText)
+            except:
+                RaiseError('File Error', self.filepath+'\nText cannot be formatted to HTML.')
+            if (os.path.exists(path)):
+                self.filepath = path
+                try:
+                    open("temp.htm", 'w+').write(self.new)
+                    os.remove(self.filepath)
+                    os.rename("temp.htm", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                    os.remove("temp.htm")
+            else:
+                self.filepath = path
+                try:
+                    open("temp.htm", 'w+').write(self.new)
+                    os.rename("temp.htm", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot write file.')
+                    os.remove("temp.htm")
 
     def exportDBFile(self):
         path = self.saveFileName(self.exp_db_opt)
@@ -824,13 +884,6 @@ class Main:
         a.dialog.activate()
         self.updateLineNums()
         self.addToHistory()
-
-    ##Check for non-ascii characters in file and raise message
-    def checkUnicode(self):
-        text = self.tbox1.get(first=None,last=None)
-        message = checkUnicode(text)
-
-        RaiseMessage('Unicode check',message)
 
     ##Change the format of the BibTeX to Maxion Style
     def editFormat(self):
@@ -882,14 +935,12 @@ class Main:
             reply = tkMessageBox.askquestion('Error',
                                         'Do you want to exit without saving?')
             if (reply == 'yes'):
-                f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
-                f.write(fields2Txt(self.entriesDefault))
-                f.close()
+                open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
+                    fields2Txt(self.entriesDefault))
                 self.root.destroy()
         else:
-            f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
-            f.write(fields2Txt(self.entriesDefault))
-            f.close()
+            open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
+                fields2Txt(self.entriesDefault))
             self.root.destroy()
 
     #highlights all instances of the pattern
