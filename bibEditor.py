@@ -42,6 +42,7 @@ class PromptDB:
         self.Constants = Constants
         self.tbox1 = tbox1
         self.path = path
+        self.bibs = {}
 
     def openFile(self):
         self.conn = sqlite3.connect(self.path)
@@ -69,6 +70,12 @@ class PromptDB:
         self.tbl.withdraw()
 
     def saveFile(self):
+        self.bibs = bib2Dict(self.tbox1.get())
+
+        if (type(self.bibs)==str):
+            RaiseError('BibTeX Error', self.bibs)
+            return
+        
         self.conn = sqlite3.connect(self.path)
         self.cursor = self.conn.cursor()
         
@@ -103,24 +110,20 @@ class PromptDB:
                 RaiseError('No Selected Table', message)
             else:
                 self.table=str(sel[0])
-                bibs = DB2Dict(self.path, self.table)
-                keys = sortKeys(bibs)
+                self.bibs = DB2Dict(self.path, self.table)
+                keys = sortKeys(self.bibs)
                 for k in keys:
-                    entry = bibs[k]
+                    entry = self.bibs[k]
                     self.text = self.text+formatBib(k, entry,
                                                     self.Constants._fieldText())
                 self.tbox1.settext(self.text)
                 self.tbl.deactivate()
 
     def setTable(self, result):
+        bibs = self.bibs
+
         typ = str(self.tbl.get())
         sel = str(self.tbl.getcurselection())
-
-        bibs = bib2Dict(self.tbox1.get())
-
-        if (type(bibs)==str):
-            RaiseError('BibTeX Error', bibs)
-            return
 
         if (result=='Cancel' or result==None):
             self.tbl.deactivate()
@@ -861,9 +864,12 @@ class Main:
             self.filepath = path
             a = PromptDB(self.root, self.tbox1, path, self.Constants)
             a.saveFile()
-            a.tbl.activate()
-            self.root.title('BibTeX Editor - '+path)
-            self.exported = True
+            try:
+                a.tbl.activate()
+                self.root.title('BibTeX Editor - '+path)
+                self.exported = True
+            except:
+                pass
 
     ##Insert new entry into the current displayed BibTeX 
     def insertEntry(self):
