@@ -724,13 +724,21 @@ class Main:
 
     ##Overwrite the .bib file with new version (save as is)
     def saveFile(self):
-        if (self.filepath!=''):
+        if (self.filepath!='.bib'):
             new = self.tbox1.get(first=None, last=None)
             self.new = \
                 unicodedata.normalize('NFKD',new).encode('ascii','ignore')
-            open(self.filepath, 'w+').write(self.new)
-            self.root.title('BibTeX Editor - '+self.filepath)
-            self.exported = True
+            try:
+                open("temp.bib", 'w+').write(self.new)
+                os.remove(self.filepath)
+                os.rename("temp.bib", self.filepath)
+                self.root.title('BibTeX Editor - '+self.filepath)
+                self.loadText(self.filepath)
+                self.exported = True
+                self.checkExported()
+            except:
+                RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                os.remove("temp.bib")
         else:
             self.exportBibFile()
 
@@ -777,13 +785,38 @@ class Main:
     def exportBibFile(self):
         path = self.saveFileName(self.exp_bib_opt)
         if (path):
-            self.filepath = path
-            new = self.tbox1.get(first=None, last=None)
-            self.new = \
-                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
-            open(path, 'w+').write(self.new)
-            self.root.title('BibTeX Editor - '+path)
-            self.exported = True
+            if (os.path.exists(path)):
+                self.filepath = path
+                new = self.tbox1.get(first=None, last=None)
+                self.new = \
+                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                try:
+                    open("temp.bib", 'w+').write(self.new)
+                    os.remove(self.filepath)
+                    os.rename("temp.bib", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.loadText(self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                    os.remove("temp.bib")
+            else:
+                self.filepath = path
+                new = self.tbox1.get(first=None, last=None)
+                self.new = \
+                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                try:
+                    open("temp.bib", 'w+').write(self.new)
+                    os.rename("temp.bib", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.loadText(self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot write file.')
+                    os.remove("temp.bib")
+                
 
     #Export to .htm file
     def exportHTMLFile(self):
@@ -791,8 +824,33 @@ class Main:
         if (path):
             self.filepath = path
             bibText = self.tbox1.get(first=None, last=None)
-            self.new = outHTML(bibText)
-            open(path, 'w+').write(self.new)
+            try:
+                self.new = outHTML(bibText)
+            except:
+                RaiseError('File Error', self.filepath+'\nText cannot be formatted to HTML.')
+            if (os.path.exists(path)):
+                self.filepath = path
+                try:
+                    open("temp.htm", 'w+').write(self.new)
+                    os.remove(self.filepath)
+                    os.rename("temp.htm", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot overwrite file.')
+                    os.remove("temp.htm")
+            else:
+                self.filepath = path
+                try:
+                    open("temp.htm", 'w+').write(self.new)
+                    os.rename("temp.htm", self.filepath)
+                    self.root.title('BibTeX Editor - '+self.filepath)
+                    self.exported = True
+                    self.checkExported()
+                except:
+                    RaiseError('File Error', self.filepath+'\nCannot write file.')
+                    os.remove("temp.htm")
 
     def exportDBFile(self):
         path = self.saveFileName(self.exp_db_opt)
