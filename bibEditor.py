@@ -540,7 +540,9 @@ class FieldMenu:
         elif (button == 'Export current\nfield order to file'):
             path = self.saveFileName()
             if (path):
-                open(path, 'w+').write(self.fieldOrders.getvalue())
+                f = open(path, 'w+')
+                f.write(self.fieldOrders.getvalue())
+                f.close()
         elif (button == 'Set current\nfield order as default'):
             self.uploadFields()
         elif (button == 'Close' or button == None):
@@ -725,11 +727,9 @@ class Main:
     ##Overwrite the .bib file with new version (save as is)
     def saveFile(self):
         if (self.filepath!='.bib'):
-            new = self.tbox1.get(first=None, last=None)
-            self.new = \
-                unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+            self.new = self.tbox1.get(first=None, last=None)
             try:
-                open("temp.bib", 'w+').write(self.new)
+                open("temp.bib", 'w+').write(self.new.encode('utf8'))
                 os.remove(self.filepath)
                 os.rename("temp.bib", self.filepath)
                 self.root.title('BibTeX Editor - '+self.filepath)
@@ -787,11 +787,9 @@ class Main:
         if (path):
             if (os.path.exists(path)):
                 self.filepath = path
-                new = self.tbox1.get(first=None, last=None)
-                self.new = \
-                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                self.new = self.tbox1.get(first=None, last=None)
                 try:
-                    open("temp.bib", 'w+').write(self.new)
+                    open("temp.bib", 'w+').write(self.new.encode('utf8'))
                     os.remove(self.filepath)
                     os.rename("temp.bib", self.filepath)
                     self.root.title('BibTeX Editor - '+self.filepath)
@@ -803,11 +801,9 @@ class Main:
                     os.remove("temp.bib")
             else:
                 self.filepath = path
-                new = self.tbox1.get(first=None, last=None)
-                self.new = \
-                    unicodedata.normalize('NFKD',new).encode('ascii','ignore')
+                self.new = self.tbox1.get(first=None, last=None)
                 try:
-                    open("temp.bib", 'w+').write(self.new)
+                    open("temp.bib", 'w+').write(self.new.encode('utf8'))
                     os.rename("temp.bib", self.filepath)
                     self.root.title('BibTeX Editor - '+self.filepath)
                     self.loadText(self.filepath)
@@ -816,7 +812,6 @@ class Main:
                 except:
                     RaiseError('File Error', self.filepath+'\nCannot write file.')
                     os.remove("temp.bib")
-                
 
     #Export to .htm file
     def exportHTMLFile(self):
@@ -927,12 +922,14 @@ class Main:
             reply = tkMessageBox.askquestion('Error',
                                         'Do you want to exit without saving?')
             if (reply == 'yes'):
-                open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
-                    fields2Txt(self.entriesDefault))
+                f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
+                f.write(fields2Txt(self.entriesDefault))
+                f.close()
                 self.root.destroy()
         else:
-            open(self.currdir+'\\fieldOrderDefault.txt', 'w+').write(
-                fields2Txt(self.entriesDefault))
+            f = open(self.currdir+'\\fieldOrderDefault.txt', 'w+')
+            f.write(fields2Txt(self.entriesDefault))
+            f.close()
             self.root.destroy()
 
     #highlights all instances of the pattern
