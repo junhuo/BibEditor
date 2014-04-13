@@ -43,6 +43,22 @@ def loadKeyList(fileName):
                 keys.append(line)
     return sorted(keys,key=str.lower)
 
+def checkUnicode(original):
+    length = len(original)
+
+    ##Check for non-ascii chars
+    n = 1; text = ''
+    for x in xrange(length):
+        c = original[x]
+        if (c=='\n'): n+=1
+        try:
+            c.decode('ascii')
+            text = text+c
+        except:
+            return 'Failed. Unicode character found at line '+str(n)
+
+    return 'Passed. No unicode characters found.'
+
 ##Puts bibtex file (as string) into an ordered dictionary of dictionaries where
 ##the key of outer dictionary is key of entry and maps to another dictionary of
 ##its fields and values in the order of the entries of the input
